@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Matriz de Diseño de Personajes - Editor Maestro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono&display=swap');
+        
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --accent-morph: #38bdf8;
+            --accent-psyc: #c084fc;
+            --accent-func: #34d399;
+            --accent-lore: #fb923c;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: #f1f5f9;
+            font-family: 'Inter', sans-serif;
+            padding-bottom: 260px; 
+        }
+
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .tab-btn {
+            transition: all 0.3s ease;
+            border-bottom: 2px solid transparent;
+        }
+
+        .tab-btn.active[data-type="morph"] { border-bottom-color: var(--accent-morph); background: rgba(56, 189, 248, 0.1); color: white; }
+        .tab-btn.active[data-type="psyc"] { border-bottom-color: var(--accent-psyc); background: rgba(192, 132, 252, 0.1); color: white; }
+        .tab-btn.active[data-type="func"] { border-bottom-color: var(--accent-func); background: rgba(52, 211, 153, 0.1); color: white; }
+        .tab-btn.active[data-type="lore"] { border-bottom-color: var(--accent-lore); background: rgba(251, 146, 60, 0.1); color: white; }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .matrix-option {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.2s;
+            cursor: pointer;
+            font-size: 0.85rem;
+            text-align: left;
+            padding: 0.75rem;
+            border-radius: 0.75rem;
+        }
+
+        /* Colores dinámicos para selecciones */
+        .matrix-option.selected-morph { background: var(--accent-morph); color: var(--bg-color); font-weight: bold; box-shadow: 0 0 15px rgba(56, 189, 248, 0.3); }
+        .matrix-option.selected-psyc { background: var(--accent-psyc); color: var(--bg-color); font-weight: bold; box-shadow: 0 0 15px rgba(192, 132, 252, 0.3); }
+        .matrix-option.selected-func { background: var(--accent-func); color: var(--bg-color); font-weight: bold; box-shadow: 0 0 15px rgba(52, 211, 153, 0.3); }
+        .matrix-option.selected-lore { background: var(--accent-lore); color: var(--bg-color); font-weight: bold; box-shadow: 0 0 15px rgba(251, 146, 60, 0.3); }
+
+        .status-window {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #020617;
+            border-top: 3px solid var(--accent-morph);
+            z-index: 100;
+            box-shadow: 0 -20px 50px rgba(0,0,0,0.8);
+        }
+
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        .label-status { font-size: 0.65rem; text-transform: uppercase; color: #64748b; margin-top: 4px; display: block; }
+        .value-status { font-size: 0.85rem; font-weight: 600; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        .btn-rand {
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            padding: 0.5rem 1rem;
+            border-radius: 0.75rem;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-6xl mx-auto">
+        <!-- Cabecera -->
+        <header class="mb-8 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div>
+                <h1 class="text-3xl font-bold text-white tracking-tight">Matriz de Creación</h1>
+                <p class="text-slate-500 text-sm italic">Configurador modular de personajes.</p>
+            </div>
+            <button onclick="randomizeAll()" class="bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-2xl font-bold border border-white/10 transition-all active:scale-95">
+                <i class="fas fa-sync-alt mr-2"></i> Reiniciar Todo al Azar
+            </button>
+        </header>
+
+        <!-- Navegación -->
+        <nav class="flex flex-wrap gap-2 mb-8 bg-slate-900/50 p-2 rounded-2xl border border-white/5">
+            <button class="tab-btn active px-5 py-2.5 rounded-xl text-sm font-semibold" data-type="morph" onclick="openTab(event, 'morfologia')">
+                <i class="fas fa-dna mr-2"></i> Morfología
+            </button>
+            <button class="tab-btn px-5 py-2.5 rounded-xl text-sm font-semibold" data-type="psyc" onclick="openTab(event, 'psicologia')">
+                <i class="fas fa-brain mr-2"></i> Psicología
+            </button>
+            <button class="tab-btn px-5 py-2.5 rounded-xl text-sm font-semibold" data-type="func" onclick="openTab(event, 'funcionalidad')">
+                <i class="fas fa-bolt mr-2"></i> Funcionalidad
+            </button>
+            <button class="tab-btn px-5 py-2.5 rounded-xl text-sm font-semibold" data-type="lore" onclick="openTab(event, 'lore')">
+                <i class="fas fa-history mr-2"></i> Lore
+            </button>
+        </nav>
+
+        <!-- CONTENIDOS -->
+
+        <!-- 1. MORFOLOGÍA -->
+        <div id="morfologia" class="tab-content active">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-sky-400 font-bold uppercase text-xs tracking-widest">Matriz Morfológica</h2>
+                <button onclick="randomGroup('morph')" class="btn-rand bg-sky-500/10 text-sky-400 border border-sky-500/20 hover:bg-sky-500/20">
+                    <i class="fas fa-dice"></i> Azar Físico
+                </button>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="glass-card p-4 rounded-2xl" id="m-estructura">
+                    <label class="label-status mb-3">Estructura</label>
+                    <div class="flex flex-col gap-2">
+                        <button class="matrix-option" onclick="setVal('morph', 'estructura', 'Antropomorfo')">Antropomorfo</button>
+                        <button class="matrix-option" onclick="setVal('morph', 'estructura', 'Zoomorfo')">Zoomorfo</button>
+                        <button class="matrix-option" onclick="setVal('morph', 'estructura', 'Fitomorfo')">Fitomorfo</button>
+                        <button class="matrix-option" onclick="setVal('morph', 'estructura', 'Mecamorfo')">Mecamorfo</button>
+                    </div>
+                </div>
+                <div class="glass-card p-4 rounded-2xl" id="m-exterior">
+                    <label class="label-status mb-3">Exterior</label>
+                    <div class="flex flex-col gap-2">
+                        <button class="matrix-option" onclick="setVal('morph', 'exterior', 'Piel Humana')">Piel Humana</button>
+                        <button class="matrix-option" onclick="setVal('morph', 'exterior', 'Escamas')">Escamas</button>
+                        <button class="matrix-option" onclick="setVal('morph', 'exterior', 'Quitina')">Quitina</button>
+                        <button class="matrix-option" onclick="setVal('morph', 'exterior', 'Sintético')">Sintético</button>
+                    </div>
+                </div>
+                <div class="glass-card p-4 rounded-2xl" id="m-locomocion">
+                    <label class="label-status mb-3">Locomoción</label>
+                    <div class="flex flex-col gap-2">
+                        <button class="matrix-option" onclick="setVal('morph', 'locomocion', 'Bípedo')">Bípedo</button>
+                        <button class="matrix-option" onclick="setVal('morph', 'locomocion', 'Cuadrúpedo')">Cuadrúpedo</button>
+                        <button class="matrix-option" onclick="setVal('morph', 'locomocion', 'Alas')">Alas</button>
+                        <button class="matrix-option" onclick="setVal('morph', 'locomocion', 'Orugas')">Orugas</button>
+                    </div>
+                </div>
+                <div class="glass-card p-4 rounded-2xl" id="m-articulacion">
+                    <label class="label-status mb-3">Articulación</label>
+                    <div class="flex flex-col gap-2">
+                        <button class="matrix-option" onclick="setVal('morph', 'articulacion', 'Hiper-flexible')">Hiper-flexible</button>
+                        <button class="matrix-option" onclick="setVal('morph', 'articulacion', 'Rígida')">Rígida</button>
+                        <button class="matrix-option" onclick="setVal('morph', 'articulacion', 'Hidráulica')">Hidráulica</button>
+                        <button class="matrix-option" onclick="setVal('morph', 'articulacion', 'Modular')">Modular</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. PSICOLOGÍA -->
+        <div id="psicologia" class="tab-content">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-purple-400 font-bold uppercase text-xs tracking-widest">Perfil Psicológico</h2>
+                <button onclick="randomGroup('psyc')" class="btn-rand bg-purple-500/10 text-purple-400 border border-purple-500/20 hover:bg-purple-500/20">
+                    <i class="fas fa-dice"></i> Azar Mente
+                </button>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="glass-card p-5 rounded-2xl" id="p-cognicion">
+                    <label class="label-status mb-3">Procesamiento</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button class="matrix-option text-center" onclick="setVal('psyc', 'cognicion', 'Analítico')">Analítico</button>
+                        <button class="matrix-option text-center" onclick="setVal('psyc', 'cognicion', 'Intuitivo')">Intuitivo</button>
+                        <button class="matrix-option text-center" onclick="setVal('psyc', 'cognicion', 'Instintivo')">Instintivo</button>
+                        <button class="matrix-option text-center" onclick="setVal('psyc', 'cognicion', 'Caótico')">Caótico</button>
+                    </div>
+                </div>
+                <div class="glass-card p-5 rounded-2xl" id="p-temperamento">
+                    <label class="label-status mb-3">Temperamento</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button class="matrix-option text-center" onclick="setVal('psyc', 'temperamento', 'Sanguíneo')">Sanguíneo</button>
+                        <button class="matrix-option text-center" onclick="setVal('psyc', 'temperamento', 'Flemático')">Flemático</button>
+                        <button class="matrix-option text-center" onclick="setVal('psyc', 'temperamento', 'Colérico')">Colérico</button>
+                        <button class="matrix-option text-center" onclick="setVal('psyc', 'temperamento', 'Melancólico')">Melancólico</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. FUNCIONALIDAD -->
+        <div id="funcionalidad" class="tab-content">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-emerald-400 font-bold uppercase text-xs tracking-widest">Capacidades Operativas</h2>
+                <button onclick="randomGroup('func')" class="btn-rand bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20">
+                    <i class="fas fa-dice"></i> Azar Funciones
+                </button>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="glass-card p-4 rounded-2xl" id="f-sentido">
+                    <label class="label-status mb-3">Sentido Agudo</label>
+                    <div class="flex flex-col gap-2">
+                        <button class="matrix-option" onclick="setVal('func', 'sentido', 'Visión Térmica')">Térmica</button>
+                        <button class="matrix-option" onclick="setVal('func', 'sentido', 'Ecolocalización')">Eco-loc</button>
+                        <button class="matrix-option" onclick="setVal('func', 'sentido', 'Electrorrecepción')">Electro-rec</button>
+                    </div>
+                </div>
+                <div class="glass-card p-4 rounded-2xl" id="f-defensa">
+                    <label class="label-status mb-3">Defensa Activa</label>
+                    <div class="flex flex-col gap-2">
+                        <button class="matrix-option" onclick="setVal('func', 'defensa', 'Camuflaje Activo')">Camuflaje</button>
+                        <button class="matrix-option" onclick="setVal('func', 'defensa', 'Toxinas/Veneno')">Toxinas</button>
+                        <button class="matrix-option" onclick="setVal('func', 'defensa', 'Armadura Ósea')">Armadura</button>
+                    </div>
+                </div>
+                <div class="glass-card p-4 rounded-2xl" id="f-habilidad">
+                    <label class="label-status mb-3">Habilidad Motriz</label>
+                    <div class="flex flex-col gap-2">
+                        <button class="matrix-option" onclick="setVal('func', 'habilidad', 'Sigilo Extremo')">Sigilo</button>
+                        <button class="matrix-option" onclick="setVal('func', 'habilidad', 'Fuerza Explosiva')">Fuerza</button>
+                        <button class="matrix-option" onclick="setVal('func', 'habilidad', 'Destreza Fina')">Destreza</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. LORE -->
+        <div id="lore" class="tab-content">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-orange-400 font-bold uppercase text-xs tracking-widest">Matriz de Trasfondo</h2>
+                <button onclick="randomGroup('lore')" class="btn-rand bg-orange-500/10 text-orange-400 border border-orange-500/20 hover:bg-orange-500/20">
+                    <i class="fas fa-dice"></i> Azar Lore
+                </button>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="glass-card p-4 rounded-2xl" id="l-origen">
+                    <label class="label-status mb-3">Origen</label>
+                    <div class="flex flex-col gap-2">
+                        <button class="matrix-option" onclick="setVal('lore', 'origen', 'Urbano Distópico')">Urbano</button>
+                        <button class="matrix-option" onclick="setVal('lore', 'origen', 'Estación Orbital')">Orbital</button>
+                        <button class="matrix-option" onclick="setVal('lore', 'origen', 'Rural Silvestre')">Rural</button>
+                        <button class="matrix-option" onclick="setVal('lore', 'origen', 'Subterráneo')">Subterráneo</button>
+                    </div>
+                </div>
+                <div class="glass-card p-4 rounded-2xl" id="l-clase">
+                    <label class="label-status mb-3">Clase Social</label>
+                    <div class="flex flex-col gap-2">
+                        <button class="matrix-option" onclick="setVal('lore', 'clase', 'Indigente')">Indigente</button>
+                        <button class="matrix-option" onclick="setVal('lore', 'clase', 'Trabajador')">Trabajador</button>
+                        <button class="matrix-option" onclick="setVal('lore', 'clase', 'Élite Corp')">Élite Corp</button>
+                        <button class="matrix-option" onclick="setVal('lore', 'clase', 'Realeza Caída')">Realeza</button>
+                    </div>
+                </div>
+                <div class="glass-card p-4 rounded-2xl" id="l-rol">
+                    <label class="label-status mb-3">Rol / Oficio</label>
+                    <div class="flex flex-col gap-2">
+                        <button class="matrix-option" onclick="setVal('lore', 'rol', 'Especialista')">Especialista</button>
+                        <button class="matrix-option" onclick="setVal('lore', 'rol', 'Protector')">Protector</button>
+                        <button class="matrix-option" onclick="setVal('lore', 'rol', 'Mediador')">Mediador</button>
+                        <button class="matrix-option" onclick="setVal('lore', 'rol', 'Pariá')">Pariá</button>
+                    </div>
+                </div>
+                <div class="glass-card p-4 rounded-2xl" id="l-estetica">
+                    <label class="label-status mb-3">Estética</label>
+                    <div class="flex flex-col gap-2">
+                        <button class="matrix-option" onclick="setVal('lore', 'estetica', 'Minimalista')">Minimalista</button>
+                        <button class="matrix-option" onclick="setVal('lore', 'estetica', 'Ornamental')">Ornamental</button>
+                        <button class="matrix-option" onclick="setVal('lore', 'estetica', 'Cyberpunk')">Cyberpunk</button>
+                        <button class="matrix-option" onclick="setVal('lore', 'estetica', 'Weathering')">Weathering</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- VENTANA DE ESTADO INFERIOR -->
+    <div class="status-window p-4 md:p-6">
+        <div class="max-w-6xl mx-auto">
+            <div class="flex items-center gap-3 mb-4 border-b border-white/5 pb-2">
+                <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
+                <span class="mono text-[10px] text-slate-400 font-bold uppercase tracking-widest">Sincronización de Perfil Activa</span>
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+                <!-- Morfo -->
+                <div>
+                    <h5 class="text-[10px] font-bold text-sky-400 uppercase tracking-tighter opacity-70 mb-2">Físico</h5>
+                    <div class="bg-white/5 p-2 rounded-lg border-l-2 border-sky-500">
+                        <span id="st-morph-1" class="value-status">-</span>
+                        <span id="st-morph-2" class="value-status opacity-60 text-xs mt-1 block">-</span>
+                    </div>
+                </div>
+                <!-- Psyc -->
+                <div>
+                    <h5 class="text-[10px] font-bold text-purple-400 uppercase tracking-tighter opacity-70 mb-2">Mente</h5>
+                    <div class="bg-white/5 p-2 rounded-lg border-l-2 border-purple-500">
+                        <span id="st-psyc-1" class="value-status">-</span>
+                        <span id="st-psyc-2" class="value-status opacity-60 text-xs mt-1 block">-</span>
+                    </div>
+                </div>
+                <!-- Func -->
+                <div>
+                    <h5 class="text-[10px] font-bold text-emerald-400 uppercase tracking-tighter opacity-70 mb-2">Operativo</h5>
+                    <div class="bg-white/5 p-2 rounded-lg border-l-2 border-emerald-500">
+                        <span id="st-func-1" class="value-status">-</span>
+                        <span id="st-func-2" class="value-status opacity-60 text-xs mt-1 block">-</span>
+                    </div>
+                </div>
+                <!-- Lore -->
+                <div>
+                    <h5 class="text-[10px] font-bold text-orange-400 uppercase tracking-tighter opacity-70 mb-2">Historia</h5>
+                    <div class="bg-white/5 p-2 rounded-lg border-l-2 border-orange-500">
+                        <span id="st-lore-1" class="value-status">-</span>
+                        <span id="st-lore-2" class="value-status opacity-60 text-xs mt-1 block">-</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Estado global
+        const state = {
+            morph: { estructura: 'Antropomorfo', exterior: 'Piel Humana', locomocion: 'Bípedo', articulacion: 'Hiper-flexible' },
+            psyc: { cognicion: 'Analítico', temperamento: 'Sanguíneo' },
+            func: { sentido: 'Visión Térmica', defensa: 'Camuflaje Activo', habilidad: 'Sigilo Extremo' },
+            lore: { origen: 'Urbano Distópico', clase: 'Trabajador', rol: 'Especialista', estetica: 'Minimalista' }
+        };
+
+        const config = {
+            morph: ['estructura', 'exterior', 'locomocion', 'articulacion'],
+            psyc: ['cognicion', 'temperamento'],
+            func: ['sentido', 'defensa', 'habilidad'],
+            lore: ['origen', 'clase', 'rol', 'estetica']
+        };
+
+        function openTab(evt, tabName) {
+            const contents = document.querySelectorAll(".tab-content");
+            contents.forEach(c => c.classList.remove("active"));
+            const btns = document.querySelectorAll(".tab-btn");
+            btns.forEach(b => b.classList.remove("active"));
+            document.getElementById(tabName).classList.add("active");
+            evt.currentTarget.classList.add("active");
+            
+            // Actualizar color de la barra inferior según la pestaña
+            const type = evt.currentTarget.getAttribute('data-type');
+            const colors = { morph: '#38bdf8', psyc: '#c084fc', func: '#34d399', lore: '#fb923c' };
+            document.querySelector('.status-window').style.borderTopColor = colors[type];
+        }
+
+        function setVal(group, key, val) {
+            state[group][key] = val;
+            updateUI(group, key, val);
+            updateStatus();
+        }
+
+        function updateUI(group, key, val) {
+            const containerId = group.charAt(0) + '-' + key;
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            
+            const buttons = container.querySelectorAll('.matrix-option');
+            const selectedClass = `selected-${group}`;
+            
+            buttons.forEach(btn => {
+                if (btn.innerText === val || btn.innerText.includes(val)) {
+                    btn.className = `matrix-option ${selectedClass}`;
+                } else {
+                    btn.className = 'matrix-option';
+                }
+            });
+        }
+
+        function updateStatus() {
+            // Físico
+            document.getElementById('st-morph-1').innerText = state.morph.estructura;
+            document.getElementById('st-morph-2').innerText = `${state.morph.exterior} • ${state.morph.locomocion}`;
+            
+            // Mente
+            document.getElementById('st-psyc-1').innerText = state.psyc.cognicion;
+            document.getElementById('st-psyc-2').innerText = state.psyc.temperamento;
+
+            // Operativo
+            document.getElementById('st-func-1').innerText = state.func.sentido;
+            document.getElementById('st-func-2').innerText = `${state.func.defensa} • ${state.func.habilidad}`;
+
+            // Lore
+            document.getElementById('st-lore-1').innerText = state.lore.origen;
+            document.getElementById('st-lore-2').innerText = `${state.lore.rol} (${state.lore.clase})`;
+        }
+
+        function randomGroup(group) {
+            config[group].forEach(key => {
+                const containerId = group.charAt(0) + '-' + key;
+                const container = document.getElementById(containerId);
+                const buttons = container.querySelectorAll('.matrix-option');
+                const randBtn = buttons[Math.floor(Math.random() * buttons.length)];
+                
+                // Extraer el valor limpio del texto del botón
+                let val = randBtn.innerText;
+                setVal(group, key, val);
+            });
+        }
+
+        function randomizeAll() {
+            Object.keys(config).forEach(g => randomGroup(g));
+        }
+
+        // Inicializar
+        window.onload = () => {
+            Object.keys(state).forEach(group => {
+                Object.keys(state[group]).forEach(key => {
+                    updateUI(group, key, state[group][key]);
+                });
+            });
+            updateStatus();
+        };
+    </script>
+</body>
+</html>
